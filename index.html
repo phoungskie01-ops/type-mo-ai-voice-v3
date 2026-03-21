@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natural AI Voice Pro</title>
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=8Q6ZfS7N"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0f0f12] flex items-center justify-center min-h-screen p-6 text-white font-sans">
+
+<div class="bg-[#1c1c24] p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/5 text-center">
+    <h1 class="text-3xl font-black mb-1 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent uppercase">Natural Voice AI</h1>
+    <p class="text-green-400 text-[10px] mb-8 uppercase tracking-[0.2em] font-bold">Stable & Natural Mode 🎭</p>
+
+    <div class="space-y-5 text-left">
+        <div>
+            <label class="block text-[10px] font-black text-gray-500 uppercase mb-2">Iyong Caption</label>
+            <textarea id="textInput" rows="3" class="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition" placeholder="Type ka dito..."></textarea>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-black text-gray-500 uppercase mb-2">Piliin ang Karakter</label>
+            <select id="voiceSelect" class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none cursor-pointer">
+                <option value="UK English Male">Lolo (Deep/Natural)</option>
+                <option value="UK English Female">Lola (Soft/Natural)</option>
+                <option value="Filipino Female">Standard (Tagalog Girl)</option>
+            </select>
+        </div>
+
+        <button onclick="magsalita()" id="btn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all text-sm uppercase">
+            Magsalita na!
+        </button>
+    </div>
+</div>
+
+<script>
+    function magsalita() {
+        const text = document.getElementById('textInput').value;
+        const voice = document.getElementById('voiceSelect').value;
+        
+        if (!text) return alert("Mag-type muna!");
+
+        // ResponsiveVoice Settings para sa Natural Sound
+        let pitch = 1;
+        let rate = 1;
+
+        if (voice === "UK English Male") {
+            pitch = 0.5; // Gawing Lolo ang tunog
+            rate = 0.8; 
+        } else if (voice === "UK English Female") {
+            pitch = 0.8; // Gawing Lola ang tunog
+            rate = 0.7;
+        }
+
+        responsiveVoice.speak(text, voice, {pitch: pitch, rate: rate});
+    }
+</script>
+
+</body>
+</html>
