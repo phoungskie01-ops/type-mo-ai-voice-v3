@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Generator Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        select, textarea, button { font-size: 16px !important; } /* Iwas zoom sa iPhone */
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="glass-card p-6 rounded-3xl shadow-2xl w-full max-w-lg transition-all">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">AI Voice Generator</h1>
+            <p class="text-slate-400 text-xs mt-1">Gawing boses ang iyong mga Reel captions.</p>
+        </header>
+
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Iyong Caption</label>
+                <textarea id="textInput" rows="4" class="w-full p-4 bg-slate-900/80 border border-slate-700 rounded-2xl outline-none focus:border-blue-500 text-slate-200 transition-all" placeholder="Ano ang sasabihin ng AI?"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Piliin ang Boses</label>
+                <select id="voiceSelect" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-2xl text-slate-200 outline-none">
+                    <option value="Kore">Kore (Standard)</option>
+                    <option value="Leda">Leda (Malumanay)</option>
+                    <option value="Puck">Puck (Masayahin)</option>
+                    <option value="Charon">Charon (Malalim)</option>
+                    <option value="Zephyr">Zephyr (Mabilis)</option>
+                </select>
+            </div>
+
+            <button id="speakBtn" class="w-full bg-blue-600 active:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3">
+                <span id="btnText">🔊 Magsalita na!</span>
+                <div id="loader" class="hidden animate-spin h-6 w-6 border-4 border-white border-t-transparent rounded-full"></div>
+            </button>
+
+            <div id="errorBox" class="hidden p-4 bg-red-900/30 border border-red-500/50 text-red-300 rounded-xl text-xs">
+                ⚠️ <span id="errorText">May error. Pakicheck ang API key.</span>
+            </div>
+
+            <div id="audioBox" class="hidden animate-in fade-in zoom-in duration-300 mt-4 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                <audio id="audioPlayer" controls class="w-full filter invert opacity-80"></audio>
+                <div class="flex justify-between items-center mt-3 px-1">
+                    <button id="dlBtn" class="text-[10px] text-blue-400 font-bold uppercase tracking-tighter">💾 I-save sa Phone</button>
+                    <span class="text-[10px] text-slate-500">Gemini 2.5 AI</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ILAGAY ANG IYONG API KEY SA LOOB NG QUOTES SA IBABA:
+        const apiKey = ""; 
+
+        const speakBtn = document.getElementById('speakBtn');
+        const btnText = document.getElementById('btnText');
+        const loader = document.getElementById('loader');
+        const audioBox = document.getElementById('audioBox');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const errorBox = document.getElementById('errorBox');
+        const dlBtn = document.getElementById('dlBtn');
+
+        let currentBlob = null;
+
+        function toWav(pcm, rate) {
+            const buf = new ArrayBuffer(44 + pcm.length * 2);
+            const view = new DataView(buf);
+            const s = (o, str) => { for(let i=0; i<str.length; i++) view.setUint8(o+i, str.charCodeAt(i)); };
+            s(0, 'RIFF'); view.setUint32(4, 36 + pcm.length * 2, true);
+            s(8, 'WAVE'); s(12, 'fmt '); view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+            view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+            view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+            s(36, 'data'); view.setUint32(40, pcm.length * 2, true);
+            for (let i = 0; i < pcm.length; i++) view.setInt16(44 + i * 2, pcm[i], true);
+            return new Blob([buf], { type: 'audio/wav' });
+        }
+
+        speakBtn.addEventListener('click', async () => {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) return;
+
+            errorBox.classList.add('hidden');
+            speakBtn.disabled = true;
+            btnText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            audioBox.classList.add('hidden');
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text }] }],
+                        generationConfig: { 
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: document.getElementById('voiceSelect').value }}}
+                        }
+                    })
+                });
+
+                if (!res.ok) throw new Error("API Error. Siguraduhing tama ang API Key sa code.");
+
+                const data = await res.json();
+                const audio = data.candidates[0].content.parts[0].inlineData;
+                const bin = atob(audio.data);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                
+                const pcm = new Int16Array(bytes.buffer);
+                const rate = parseInt(audio.mimeType.match(/rate=(\d+)/)?.[1] || "24000");
+
+                currentBlob = toWav(pcm, rate);
+                audioPlayer.src = URL.createObjectURL(currentBlob);
+                audioBox.classList.remove('hidden');
+                audioPlayer.play();
+
+            } catch (e) {
+                document.getElementById('errorText').innerText = e.message;
+                errorBox.classList.remove('hidden');
+            } finally {
+                speakBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                loader.classList.add('hidden');
+            }
+        });
+
+        dlBtn.addEventListener('click', () => {
+            if (!currentBlob) return;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(currentBlob);
+            a.download = `ai_voice_${Date.now()}.wav`;
+            a.click();
+        });
+    </script>
+</body>
+</html>
+
